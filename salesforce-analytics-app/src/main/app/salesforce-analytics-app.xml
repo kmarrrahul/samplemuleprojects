@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:sfdc-analytics="http://www.mulesoft.org/schema/mule/sfdc-analytics" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/sfdc-analytics http://www.mulesoft.org/schema/mule/sfdc-analytics/current/mule-sfdc-analytics.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
+    <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="${http.port}" doc:name="HTTP Listener Configuration"/>
+    <sfdc-analytics:config name="Salesforce_Analytics_Cloud__Basic_authentication" username="${sfdc.username}" password="${sfdc.password}" securityToken="${sfdc.token}" url="${sfdc.url}" metadataFileName="metadata/sampledataforWave.json" doc:name="Salesforce Analytics Cloud: Basic authentication"/>
+    <flow name="salesforce-analytics-load-Flow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/waveload" doc:name="HTTP"/>
+        <flow-ref name="ContainerDetails-Sub_Flow" doc:name="Invoke ContainerDetails-Sub_Flow" doc:description="Invoke ContainerDetails-Sub_Flow to get the Container Id/Developer Name "/>
+        <dw:transform-message doc:name="Create Sample Data for DataSet">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+%var sampleSize = 1000
+---
+
+(1 to sampleSize) map {
+	"Field1" : "Field1Value" ++ "$",
+	"Field2" : "Field2Value" ++ "$",
+	"Field3" : now as :date {format : "MM/dd/yyyy"}, //Date field should be of the same format as defined in metadatjson
+	"Field4" : "Field4Value" ++ "$",
+	"Field5" : "Field5Value" ++ "$"
+}]]></dw:set-payload>
+        </dw:transform-message>        
+        <sfdc-analytics:upload-external-data-into-new-data-set-and-start-processing config-ref="Salesforce_Analytics_Cloud__Basic_authentication" type="metadata\sampledataforWave.json:RELATIVE" operation="APPEND" description="Sample Data Set 1" label="Data Set 1" dataSetName="demodataset1" edgemartContainer="#[flowVars.dataSetContainerName]" doc:name="Salesforce Analytics Cloud : Create,Upload and Start Processing">
+            <sfdc-analytics:payload ref="#[payload]"/>
+        </sfdc-analytics:upload-external-data-into-new-data-set-and-start-processing>
+    </flow>
+    <flow name="salesforce-analytics-batchload-Flow" >
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/waveloadinbatch" doc:name="HTTP"/>
+        <flow-ref name="ContainerDetails-Sub_Flow" doc:name="Invoke ContainerDetails-Sub_Flow" doc:description="Invoke ContainerDetails-Sub_Flow to get the Container Id/Developer Name "/>
+        <enricher source="#[payload]" target="#[flowVars.datasetname]" doc:name="Message Enricher" doc:description="Get the Salesforce ID of the Dataset Created in a variable.">
+            <sfdc-analytics:create-data-set config-ref="Salesforce_Analytics_Cloud__Basic_authentication" operation="APPEND" description="Sample data Set" label="Data Set 2" dataSetName="demodataset2" edgemartContainer="#[flowVars.dataSetContainerName]" type="metadata\sampledataforWave.json:RELATIVE" doc:name="Salesforce Analytics Cloud : Create DataSet"/>
+        </enricher>
+        <dw:transform-message doc:name="Create Sample Data for DataSet">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+%var sampleSize = 10000
+---
+
+(1 to sampleSize) map {
+	"Field1" : "Field1Value" ++ "$",
+	"Field2" : "Field2Value" ++ "$",
+	"Field3" : now as :date {format : "MM/dd/yyyy"}, //Date field should be of the same format as defined in metadatjson
+	"Field4" : "Field4Value" ++ "$",
+	"Field5" : "Field5Value" ++ "$"
+}]]></dw:set-payload>
+        </dw:transform-message>
+        <batch:execute name="salesforce-analytics-appBatch" doc:name="Batch Execute"/>
+    </flow>
+    <batch:job name="salesforce-analytics-appBatch">
+        <batch:process-records>
+            <batch:step name="Batch_Step">
+                <batch:commit size="1000" doc:name="Batch Commit">
+                    <sfdc-analytics:upload-external-data config-ref="Salesforce_Analytics_Cloud__Basic_authentication" type="metadata\sampledataforWave.json:RELATIVE" dataSetId="#[flowVars.datasetname]" doc:name="Salesforce Analytics Cloud : Upload Data Part">
+                        <sfdc-analytics:payload ref="#[payload]"/>
+                    </sfdc-analytics:upload-external-data>
+                </batch:commit>
+            </batch:step>
+        </batch:process-records>
+        <batch:on-complete>
+            <sfdc-analytics:start-data-processing config-ref="Salesforce_Analytics_Cloud__Basic_authentication" dataSetId="#[flowVars.datasetname]" doc:name="Salesforce Analytics Cloud : Trigger Data Processing" doc:description="Trigger the processing of data which was uploaded in Parts till now.
+On the Data processing is triggered the status can be monitored in Data Manager"/>
+        </batch:on-complete>
+    </batch:job>
+    <sub-flow name="ContainerDetails-Sub_Flow" doc:description="It would be a good idea to get the Id or Developer Name of the App dynamically instead of storing it as a property.">
+        <set-variable variableName="dataSetContainerName" value="${dataSetContainerName}" doc:name="Variable : DataSetContainerName" doc:description="DataSet Container Name - Salesforce ID or Developer Name of the App in which Dataset is to be created.
+
+SELECT Id,DeveloperName,Name, AccessType,CreatedDate,Type FROM Folder where Type = 'Insights'
+
+Ref : https://developer.salesforce.com/docs/atlas.en-us.bi_dev_guide_ext_data.meta/bi_dev_guide_ext_data/bi_ext_data_object_externaldata.htm"/>
+    </sub-flow>
+</mule>

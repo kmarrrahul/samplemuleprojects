@@ -1,0 +1,45 @@
+{
+	"fileFormat": {
+		"charsetName": "UTF-8",
+		"fieldsDelimitedBy": ",",
+		"fieldsEnclosedBy": "\"",
+		"linesTerminatedBy": "\n",
+		"numberOfLinesToIgnore": 1
+	},
+	"objects": [{
+		"connector": "CSV",
+		"fullyQualifiedName": "sampledataforWave_csv",
+		"label": "sampledataforWave.csv",
+		"name": "sampledataforWave_csv",
+		"fields": [{
+			"fullyQualifiedName": "Field1",
+			"name": "Field1",
+			"type": "Text",
+			"label": "EVENT_TYPE"
+		}, {
+			"fullyQualifiedName": "Field2",
+			"name": "Field2",
+			"type": "Text",
+			"label": "Field2"
+		}, {
+			"fullyQualifiedName": "Field3",
+			"name": "Field3",
+			"type": "Date",
+			"label": "Field3",
+			"format": "MM/dd/yyyy",
+			"firstDayOfWeek": -1,
+			"fiscalMonthOffset": 0,
+			"isYearEndFiscalYear": true
+		}, {
+			"fullyQualifiedName": "Field4",
+			"name": "Field4",
+			"type": "Text",
+			"label": "Field4"
+		}, {
+			"fullyQualifiedName": "Field5",
+			"name": "Field5",
+			"type": "Text",
+			"label": "Field5"
+		}]
+	}]
+}
