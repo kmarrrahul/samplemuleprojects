@@ -24,7 +24,7 @@ http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/ba
 (1 to sampleSize) map {
 	"Field1" : "Field1Value" ++ "$",
 	"Field2" : "Field2Value" ++ "$",
-	"Field3" : now as :date {format : "MM/dd/yyyy"}, //Date field should be of the same format as defined in metadatjson
+	"Field3" : now as :date, //Date formatting will be taken care by Connector using MetaData JSON
 	"Field4" : "Field4Value" ++ "$",
 	"Field5" : "Field5Value" ++ "$"
 }]]></dw:set-payload>
@@ -48,7 +48,7 @@ http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/ba
 (1 to sampleSize) map {
 	"Field1" : "Field1Value" ++ "$",
 	"Field2" : "Field2Value" ++ "$",
-	"Field3" : now as :date {format : "MM/dd/yyyy"}, //Date field should be of the same format as defined in metadatjson
+	"Field3" : now as :date, //Date formatting will be taken care by Connector using MetaData JSON
 	"Field4" : "Field4Value" ++ "$",
 	"Field5" : "Field5Value" ++ "$"
 }]]></dw:set-payload>
