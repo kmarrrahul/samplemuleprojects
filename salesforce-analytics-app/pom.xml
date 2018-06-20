@@ -150,6 +150,12 @@
             <artifactId>mule-module-sfdc</artifactId>
             <version>8.6.0</version>
         </dependency>
+    <dependency>
+            <groupId>org.mule.modules</groupId>
+            <artifactId>mule-module-spring-config</artifactId>
+            <version>${mule.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
 	<repositories>

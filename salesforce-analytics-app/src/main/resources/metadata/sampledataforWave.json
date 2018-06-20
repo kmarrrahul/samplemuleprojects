@@ -9,13 +9,13 @@
 	"objects": [{
 		"connector": "CSV",
 		"fullyQualifiedName": "sampledataforWave_csv",
-		"label": "sampledataforWave.csv",
+		"label": "Sample Data for Wave",
 		"name": "sampledataforWave_csv",
 		"fields": [{
 			"fullyQualifiedName": "Field1",
 			"name": "Field1",
 			"type": "Text",
-			"label": "EVENT_TYPE"
+			"label": "Field1"
 		}, {
 			"fullyQualifiedName": "Field2",
 			"name": "Field2",
