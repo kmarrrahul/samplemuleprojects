@@ -73,6 +73,5 @@ We will be covering these scenarios in this series.
 
 Scenario 1 : Creating a new DataSet/Adding to an existing DataSet and uploading records in the DataSet. (In Batches and in one go)
 Scenario 2 : Overwriting the dataset with new set of Data
-Scenario 3 : Creating a DataSet with a Primary Key and uploading records in the DataSet.
-Scenario 4 : Updating (Upserting) the records in the Dataset.
-Scenario 5 : Deleting records in the DataSet
+Scenario 3 : Creating a DataSet with a Primary Key and inserting/updating records in the DataSet.
+Scenario 4 : Deleting records in the DataSet

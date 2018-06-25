@@ -1,0 +1,58 @@
+{
+	"fileFormat": {
+		"charsetName": "UTF-8",
+		"fieldsDelimitedBy": ",",
+		"fieldsEnclosedBy": "\"",
+		"linesTerminatedBy": "\n",
+		"numberOfLinesToIgnore": 1
+	},
+	"objects": [{
+		"connector": "CSV",
+		"fullyQualifiedName": "uniquedataforWave_csv",
+		"label": "Unique Data for Wave",
+		"name": "uniquedataforWave_csv",
+		"fields": [{
+			"fullyQualifiedName": "CustomerID",
+			"name": "CustomerID",
+			"type": "Text",
+			"label": "Customer ID"
+		}, {
+			"fullyQualifiedName": "PurchaseID",
+			"name": "PurchaseID",
+			"type": "Text",
+			"label": "Purchase ID"
+		}, {
+			"fullyQualifiedName": "ItemsPurchased",
+			"name": "ItemsPurchased",
+			"type": "Text",
+			"label": "Items Purchased",
+			"isMultiValue": true,
+			"multiValueSeparator" : ";"
+		}, {
+			"fullyQualifiedName": "PurchaseAmount",
+			"label": "Purchase Amount",
+			"name": "PurchaseAmount",
+			"defaultValue": "0",
+			"type": "Numeric",
+			"precision": 10,
+			"scale": 2,
+			"format": "$#,##0.00"
+		}, {
+			"fullyQualifiedName": "PurchaseDate",
+			"name": "PurchaseDate",
+			"type": "Date",
+			"label": "Purchase Date",
+			"format": "MM/dd/yyyy",
+			"firstDayOfWeek": -1,
+			"fiscalMonthOffset": 0,
+			"isYearEndFiscalYear": true
+		}, {
+			"fullyQualifiedName": "PrimaryKeyField",
+			"name": "PrimaryKeyField",
+			"type": "Text",
+			"label": "PrimaryKeyField",
+			"isUniqueId": true,
+			"description": "Combination of Purchase ID and Purchase Date"
+		}]
+	}]
+}

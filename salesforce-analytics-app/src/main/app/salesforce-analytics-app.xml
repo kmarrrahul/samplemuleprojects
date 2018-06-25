@@ -12,6 +12,7 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd">
     <http:listener-config name="HTTP_Listener_Configuration" host="0.0.0.0" port="${http.port}" doc:name="HTTP Listener Configuration"/>
     <sfdc-analytics:config name="Salesforce_Analytics_Cloud__Basic_authentication" username="${sfdc.username}" password="${sfdc.password}" securityToken="${sfdc.token}" url="${sfdc.url}" metadataFileName="metadata/sampledataforWave.json" doc:name="Salesforce Analytics Cloud: Basic authentication"/>
+    <sfdc-analytics:config name="Salesforce_Analytics_Cloud__Basic_authentication2" username="${sfdc.username}" password="${sfdc.password}" securityToken="${sfdc.token}" url="${sfdc.url}" metadataFileName="metadata/uniqueDataForWave.json" doc:name="Salesforce Analytics Cloud: Basic authentication"/>
     <sub-flow name="salesforce-analytics-append-dataset-Sub_Flow">
         <set-variable variableName="dataSetContainerName" value="${dataSetContainerName}" doc:name="Variable : DataSetContainerName" doc:description="DataSet Container Name - Salesforce ID or Developer Name of the App in which Dataset is to be created.
 
@@ -45,7 +46,7 @@ SELECT Id,DeveloperName,Name, AccessType,CreatedDate,Type FROM Folder where Type
 
 Ref : https://developer.salesforce.com/docs/atlas.en-us.bi_dev_guide_ext_data.meta/bi_dev_guide_ext_data/bi_ext_data_object_externaldata.htm"/>
         
-        <enricher source="#[payload]" target="#[flowVars.datasetname]" doc:name="Message Enricher" doc:description="Get the Salesforce ID of the Dataset Created in a variable.">
+        <enricher source="#[payload]" target="#[flowVars.datasetid]" doc:name="Message Enricher" doc:description="Get the Salesforce ID of the Dataset Created in a variable.">
             <sfdc-analytics:create-data-set config-ref="Salesforce_Analytics_Cloud__Basic_authentication" operation="APPEND" description="Sample data Set" label="Data Set 2" dataSetName="demodataset2" edgemartContainer="#[flowVars.dataSetContainerName]" type="metadata\sampledataforWave.json:RELATIVE" doc:name="Salesforce Analytics Cloud : Create DataSet"/>
         </enricher>
         <dw:transform-message doc:name="Create Sample Data for DataSet">
@@ -68,7 +69,7 @@ Ref : https://developer.salesforce.com/docs/atlas.en-us.bi_dev_guide_ext_data.me
     <sub-flow name="salesforce-analytics-batch-overwrite-Sub_Flow">
         <set-variable variableName="dataSetContainerName" value="${dataSetContainerName}" doc:name="Variable : DataSetContainerName" doc:description="DataSet Container Name - Salesforce ID or Developer Name of the App in which Dataset is to be created"/>
 
-        <enricher source="#[payload]" target="#[flowVars.datasetname]" doc:name="Message Enricher" doc:description="Get the Salesforce ID of the Dataset Created in a variable.">
+        <enricher source="#[payload]" target="#[flowVars.datasetid]" doc:name="Message Enricher" doc:description="Get the Salesforce ID of the Dataset Created in a variable.">
             <sfdc-analytics:create-data-set config-ref="Salesforce_Analytics_Cloud__Basic_authentication" operation="OVERWRITE" description="Sample data Set" label="Data Set 2" dataSetName="demodataset2" edgemartContainer="#[flowVars.dataSetContainerName]" type="metadata\sampledataforWave.json:RELATIVE" doc:name="Salesforce Analytics Cloud : Overwrite DataSet"/>
 
         </enricher>
@@ -87,23 +88,84 @@ Ref : https://developer.salesforce.com/docs/atlas.en-us.bi_dev_guide_ext_data.me
 }]]></dw:set-payload>
         </dw:transform-message>
         <batch:execute name="salesforce-analytics-appBatch" doc:name="Batch Execute"/>
-    </sub-flow>    
-
+    </sub-flow>
     <batch:job name="salesforce-analytics-appBatch">
         <batch:process-records>
             <batch:step name="Batch_Step">
                 <batch:commit size="1000" doc:name="Batch Commit">
-                    <sfdc-analytics:upload-external-data config-ref="Salesforce_Analytics_Cloud__Basic_authentication" type="metadata\sampledataforWave.json:RELATIVE" dataSetId="#[flowVars.datasetname]" doc:name="Salesforce Analytics Cloud : Upload Data Part">
+                    <sfdc-analytics:upload-external-data config-ref="Salesforce_Analytics_Cloud__Basic_authentication" type="metadata\sampledataforWave.json:RELATIVE" dataSetId="#[flowVars.datasetid]" doc:name="Salesforce Analytics Cloud : Upload Data Part">
                         <sfdc-analytics:payload ref="#[payload]"/>
                     </sfdc-analytics:upload-external-data>
                 </batch:commit>
             </batch:step>
         </batch:process-records>
         <batch:on-complete>
-            <sfdc-analytics:start-data-processing config-ref="Salesforce_Analytics_Cloud__Basic_authentication" dataSetId="#[flowVars.datasetname]" doc:name="Salesforce Analytics Cloud : Trigger Data Processing" doc:description="Trigger the processing of data which was uploaded in Parts till now.
-On the Data processing is triggered the status can be monitored in Data Manager"/>
+            <sfdc-analytics:start-data-processing config-ref="Salesforce_Analytics_Cloud__Basic_authentication" dataSetId="#[flowVars.datasetid]" doc:name="Salesforce Analytics Cloud : Trigger Data Processing" doc:description="Trigger the processing of data which was uploaded in Parts till now. On the Data processing is triggered the status can be monitored in Data Manager"/>
         </batch:on-complete>
-    </batch:job>
+    </batch:job>    
+
+    <sub-flow name="salesforce-analytics-batch-upsert-Sub_Flow">
+        <set-variable variableName="dataSetContainerName" value="${dataSetContainerName}" doc:name="Variable : DataSetContainerName" doc:description="DataSet Container Name - Salesforce ID or Developer Name of the App in which Dataset is to be created"/>
+        <enricher source="#[payload]" target="#[flowVars.datasetid]" doc:name="Message Enricher" doc:description="Get the Salesforce ID of the Dataset Created in a variable.">
+            <sfdc-analytics:create-data-set config-ref="Salesforce_Analytics_Cloud__Basic_authentication2" operation="UPSERT" description="Sample data Set" label="Data Set 2" dataSetName="demodataset2" edgemartContainer="#[flowVars.dataSetContainerName]" type="metadata\uniqueDataForWave.json:RELATIVE" doc:name="Salesforce Analytics Cloud : Upsert DataSet"/>
+        </enricher>
+        <dw:transform-message doc:name="Create Sample Data for DataSet">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+[
+	{"CustomerID":"CustomerID1","PurchaseID":"PurchaseID1","ItemsPurchased":["Item1","Item7","Item9"],"PurchaseAmount":1.1,"PurchaseDate":"2018-06-23"as :date {format : "yyyy-MM-dd"},"PrimaryKeyField":"PurchaseID1-23/06/2018"},
+	{"CustomerID":"CustomerID2","PurchaseID":"PurchaseID2","ItemsPurchased":["Item2"],"PurchaseAmount":2.2,"PurchaseDate":"2018-06-24"as :date {format : "yyyy-MM-dd"},"PrimaryKeyField":"PurchaseID2-24/06/2018"},
+	{"CustomerID":"CustomerID3","PurchaseID":"PurchaseID3","ItemsPurchased":["Item6","Item10"],"PurchaseAmount":3.3,"PurchaseDate":"2018-06-25"as :date {format : "yyyy-MM-dd"},"PrimaryKeyField":"PurchaseID3-25/06/2018"},
+	{"CustomerID":"CustomerID4","PurchaseID":"PurchaseID4","ItemsPurchased":["Item4","Item2"],"PurchaseAmount":4.4,"PurchaseDate":"2018-06-26"as :date {format : "yyyy-MM-dd"},"PrimaryKeyField":"PurchaseID4-26/06/2018"},
+	{"CustomerID":"CustomerID5","PurchaseID":"PurchaseID5","ItemsPurchased":["Item9","Item1"],"PurchaseAmount":5.5,"PurchaseDate":"2018-06-27"as :date {format : "yyyy-MM-dd"},"PrimaryKeyField":"PurchaseID5-27/06/2018"},
+	{"CustomerID":"CustomerID6","PurchaseID":"PurchaseID6","ItemsPurchased":["Item6"],"PurchaseAmount":6.6,"PurchaseDate":"2018-06-28"as :date {format : "yyyy-MM-dd"},"PrimaryKeyField":"PurchaseID6-28/06/2018"},
+	{"CustomerID":"CustomerID7","PurchaseID":"PurchaseID7","ItemsPurchased":["Item2","Item4"],"PurchaseAmount":7.7,"PurchaseDate":"2018-06-29"as :date {format : "yyyy-MM-dd"},"PrimaryKeyField":"PurchaseID7-29/06/2018"},
+	{"CustomerID":"CustomerID8","PurchaseID":"PurchaseID8","ItemsPurchased":["Item1"],"PurchaseAmount":8.8,"PurchaseDate":"2018-06-30"as :date {format : "yyyy-MM-dd"},"PrimaryKeyField":"PurchaseID8-30/06/2018"},
+	{"CustomerID":"CustomerID9","PurchaseID":"PurchaseID9","ItemsPurchased":["Item9","Item6"],"PurchaseAmount":9.9,"PurchaseDate":"2018-07-01"as :date {format : "yyyy-MM-dd"},"PrimaryKeyField":"PurchaseID9-01/07/2018"},
+	{"CustomerID":"CustomerID10","PurchaseID":"PurchaseID10","ItemsPurchased":["Item1","Item8","Item9","Item4"],"PurchaseAmount":10.1,"PurchaseDate":"2018-07-02"as :date {format : "yyyy-MM-dd"},"PrimaryKeyField":"PurchaseID10-02/07/2018"}
+]]]></dw:set-payload>
+        </dw:transform-message>
+        <batch:execute name="salesforce-analytics-appBatch2" doc:name="Batch Execute"/>
+    </sub-flow>
+    <sub-flow name="salesforce-analytics-batch-delete-Sub_Flow">
+        <set-variable variableName="dataSetContainerName" value="${dataSetContainerName}" doc:name="Variable : DataSetContainerName" doc:description="DataSet Container Name - Salesforce ID or Developer Name of the App in which Dataset is to be created"/>
+        <enricher source="#[payload]" target="#[flowVars.datasetid]" doc:name="Message Enricher" doc:description="Get the Salesforce ID of the Dataset Created in a variable.">
+            <sfdc-analytics:create-data-set config-ref="Salesforce_Analytics_Cloud__Basic_authentication2" operation="DELETE" description="Sample data Set" label="Data Set 2" dataSetName="demodataset2" edgemartContainer="#[flowVars.dataSetContainerName]" type="metadata\uniqueDataForWave.json:RELATIVE" doc:name="Salesforce Analytics Cloud : Upsert DataSet"/>
+        </enricher>
+        <dw:transform-message doc:name="Create Sample List of Records to be Deleted">
+            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+[
+	{"PrimaryKeyField":"PurchaseID1-23/06/2018"},
+	{"PrimaryKeyField":"PurchaseID1-23/06/2018"},
+	{"PrimaryKeyField":"PurchaseID5-27/06/2018"},
+	{"PrimaryKeyField":"PurchaseID7-29/06/2018"},
+	{"PrimaryKeyField":"PurchaseID10-02/07/2018"}
+]]]></dw:set-payload>
+        </dw:transform-message>
+        <batch:execute name="salesforce-analytics-appBatch2" doc:name="Batch Execute"/>
+    </sub-flow>
+    
+    <batch:job name="salesforce-analytics-appBatch2">
+        <batch:process-records>
+            <batch:step name="Parts_Upload_Batch_Step">
+                <batch:commit size="10000" doc:name="Batch Commit">
+                    <sfdc-analytics:upload-external-data config-ref="Salesforce_Analytics_Cloud__Basic_authentication2" type="metadata\uniqueDataForWave.json:RELATIVE" dataSetId="#[flowVars.datasetid]" doc:name="Salesforce Analytics Cloud : Upload Data Part">
+                        <sfdc-analytics:payload ref="#[payload]"/>
+                    </sfdc-analytics:upload-external-data>
+                </batch:commit>
+            </batch:step>
+        </batch:process-records>
+        <batch:on-complete>
+            <sfdc-analytics:start-data-processing config-ref="Salesforce_Analytics_Cloud__Basic_authentication2" dataSetId="#[flowVars.datasetid]" doc:name="Salesforce Analytics Cloud : Trigger Data Processing" doc:description="Trigger the processing of data which was uploaded in Parts till now. On the Data processing is triggered the status can be monitored in Data Manager"/>
+        </batch:on-complete>
+    </batch:job>    
+
+
+
+
     <sub-flow name="ContainerDetails-Sub_Flow" doc:description="It would be a good idea to get the Id or Developer Name of the App dynamically instead of storing it as a property.">
         <set-variable variableName="dataSetContainerName" value="${dataSetContainerName}" doc:name="Variable : DataSetContainerName" doc:description="DataSet Container Name - Salesforce ID or Developer Name of the App in which Dataset is to be created.
 
@@ -119,7 +181,16 @@ Ref : https://developer.salesforce.com/docs/atlas.en-us.bi_dev_guide_ext_data.me
         <http:listener config-ref="HTTP_Listener_Configuration" path="/waveloadoverwriteinbatch" doc:name="HTTP"/>
         <flow-ref name="salesforce-analytics-batch-overwrite-Sub_Flow" doc:name="salesforce-analytics-batch-overwrite-Sub_Flow"/>
     </flow>    
-    
+    <flow name="salesforce-analytics-batch-upsert-Flow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/waveloadupsertinbatch" doc:name="HTTP"/>
+        <flow-ref name="salesforce-analytics-batch-upsert-Sub_Flow" doc:name="salesforce-analytics-batch-upsert-Sub_Flow"/>
+    </flow>     
+    <flow name="salesforce-analytics-batch-delete-Flow">
+        <http:listener config-ref="HTTP_Listener_Configuration" path="/waveloaddeleteinbatch" doc:name="HTTP"/>
+        <flow-ref name="salesforce-analytics-batch-delete-Sub_Flow" doc:name="salesforce-analytics-batch-delete-Sub_Flow"/>
+    </flow> 
+
+
     <flow name="salesforce-analytics-append-dataset-trigger-Flow">
         <http:listener config-ref="HTTP_Listener_Configuration" path="/waveload" doc:name="HTTP"/>
         <flow-ref name="salesforce-analytics-append-dataset-Sub_Flow" doc:name="salesforce-analytics-append-dataset-Sub_Flow"/>
