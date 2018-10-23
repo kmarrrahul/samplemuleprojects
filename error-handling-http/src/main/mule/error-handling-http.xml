@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+	<http:listener-config name="HTTP_Listener_Server_config" doc:name="HTTP Listener config" doc:id="39d468c6-5bb2-4add-915a-2db2ed02debc" >
+		<http:listener-connection host="0.0.0.0" port="9002" />
+	</http:listener-config>
+	<validation:config name="Validation_Config" doc:name="Validation Config" doc:id="092c986b-47a3-4c1c-b7b4-9916571b1108" />
+	<http:listener-config name="HTTP_Listener_Client_Config" doc:name="HTTP Listener config" doc:id="72ba8466-9edb-4bd0-af3d-c241f5024ad2" >
+		<http:listener-connection host="0.0.0.0" port="9003" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="e0a1441a-635b-45e4-92c7-b2c7ad93e05e" >
+		<http:request-connection host="0.0.0.0" port="9002" />
+	</http:request-config>
+	<http:listener-config name="HTTP_Incident_Listener_config" doc:name="HTTP Listener config" doc:id="9aa3b0a5-9ee7-462e-a121-4865af3efa5f" >
+		<http:listener-connection host="0.0.0.0" port="9006" />
+	</http:listener-config>
+	<http:request-config name="HTTP_Request_IncidentService_configuration" doc:name="HTTP Request configuration" doc:id="3489247b-f3f2-4585-9b80-b1fefe402907" >
+		<http:request-connection host="0.0.0.0" port="9006" />
+	</http:request-config>
+	<flow name="clientService-httpFlow" doc:id="7274be3a-74f0-451b-aff5-268a687b5da1">
+		<http:listener doc:name="Listener" doc:id="ebfda659-bc9a-47ba-bba5-fb1e230daf83" config-ref="HTTP_Listener_Client_Config" path="/api/create" />
+		<logger level="INFO" doc:name="Log Request" doc:id="d9c1a657-5534-4632-9a06-26aacd9af9b8" doc:description="Log Request" message="CLient Service : Request recieved #[payload]" />
+		<ee:transform doc:name="Transform Message : Transform XML to JSON" doc:id="7f6c5f36-dbb2-4826-8139-71b17fa1b65a">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"name": payload.CreateRequest.name,
+	"email": payload.CreateRequest.email,
+	"phone": payload.CreateRequest.phone as Number,
+	"state": payload.CreateRequest.stateName
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log Payload" doc:id="eb3678e4-3ea7-47bb-bb5b-4c32f4dda220" message="After Transformation #[payload]" doc:description="Log Payload after Transformation" />
+		<http:request method="POST" doc:name="Request : External Service" doc:id="8a307cbd-cf58-4ea3-8d4f-1b63d290ae41" config-ref="HTTP_Request_configuration" path="/api/create" doc:description="Send Request to external Service" />
+		<logger level="INFO" doc:name="Log Response from External Service" doc:id="12e0e465-5190-4c02-915f-165046bd2170" doc:description="Log Response from External Service" message="Response from External Service : #[payload]" />
+		<error-handler>
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="a2871bef-8d92-40f6-991f-19528b34e871">
+				<ee:transform doc:name="Transform Message for Incident Service" doc:id="d3e80a0d-3999-4ec2-99d4-d6970a71d04f">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+    "fields": {
+       "project":
+       {
+          "key": "TEST"
+       },
+       "summary": "Incident",
+       "description": error.errorMessage.payload.Message as String, //Important Note : Don't use the expression error.errorMessage.payload multiple times or even try to Log it since this Stream is not exposed by Mule as Repeatble thus using mutiple multiple times or Logging will make it lose data and thus useless
+       "issuetype": {
+          "name": "Incident"
+       }
+   }
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+				<http:request method="POST" doc:name="Request : Call Incident Creating Service" doc:id="64971e91-0140-45b8-a9f9-86d1dba3779b" config-ref="HTTP_Request_IncidentService_configuration" path="/api/incident/create" />
+				<logger level="INFO" doc:name="Log Incident Service Reponse" doc:id="bd74bdb4-e806-4f56-a7c5-a03e2269668d" doc:description="Log Incident Service Reponse" message="Log Incident Service Reponse #[payload]" />
+			</on-error-propagate>
+		</error-handler>
+	</flow>
+	<flow name="IncidentCreatingService-Flow" doc:id="8eec942c-9b69-4be9-9824-1e7b1174e2e6">
+		<http:listener doc:name="Listener" doc:id="98470f5e-1159-4d25-80aa-fcc9e2a5fddb" config-ref="HTTP_Incident_Listener_config" path="/api/incident/create" />
+		<logger level="INFO" doc:name="Log Request" doc:id="e0b6c7b4-5f77-493d-8085-5772f8754764" message="Incident Service : Log Request : #[payload]" />
+	</flow>
+	<flow name="fictionalexternalServiceFlow" doc:id="3d9780b6-398a-4be1-9c00-0756521d381e" doc:description="Entire flow fimic's a external Service which is to be consumed by our HTTP Clients">
+		<http:listener doc:name="Listener" doc:id="8f09888a-af58-463a-92c5-438752d29661" config-ref="HTTP_Listener_Server_config" path="/api/create" doc:description=" fimic's a external Service which is to be consumed by our HTTP Clients">
+			<http:error-response >
+				<http:body ><![CDATA[#[output application/json --- { "Message" : error.description }]]]></http:body>
+			</http:error-response>
+		</http:listener>
+		<logger level="INFO" doc:name="Log Request" doc:id="1a4feb0e-5fef-4034-938f-995484c594eb" doc:description="Log Request" message="Fictional External Service : Request recieved #[payload]"/>
+		<ee:transform doc:name="Transform Message : Generate Missing Flag" doc:id="75d9f2fc-3f98-410b-86da-890fb8e6e501" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="MissingFlag" ><![CDATA[%dw 2.0
+output application/java
+var p = {
+	name : "Rahul",
+	email : "rahulkumar452@deloitte.com",
+	phone : "7032824722"
+}
+---
+((payload.name != null) and 
+(payload.email != null) and
+(payload.phone != null)) ]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<validation:is-true doc:name="Is true" doc:id="85abac23-288d-417f-86ce-dd7922efc2b5" config-ref="Validation_Config" message='Either name,email or phone number were missing' expression="#[vars.MissingFlag]" doc:description="Validate for mandatory attributes and Raise Error if any."/>
+		<logger level="INFO" doc:name="Logger" doc:id="da8d4a72-b647-47ad-a52e-3bbd25061e05" message="Some Random object created" />
+		<set-payload value='{ "Message" : "Entity Created" }' doc:name="Set Payload" doc:id="891aba1a-4b12-496f-98d7-3e707ddbce17" mimeType="application/json"/>
+	</flow>
+</mule>
