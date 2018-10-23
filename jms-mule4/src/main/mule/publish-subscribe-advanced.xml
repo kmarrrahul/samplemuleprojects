@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:jms="http://www.mulesoft.org/schema/mule/jms" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd">
+	<jms:config name="JMS_Config2" doc:name="JMS Config" doc:id="d18a9e40-eb92-44d0-b24d-45411e2a97aa" >
+				<jms:active-mq-connection username="admin" password="admin">
+      <jms:caching-strategy >
+				<jms:default-caching />
+			</jms:caching-strategy>
+			<jms:factory-configuration brokerUrl="tcp://localhost:61616"
+                                 initialRedeliveryDelay="20000" redeliveryDelay="20000"  maxRedelivery="10"/>
+  </jms:active-mq-connection>
+		<jms:consumer-config >
+			<jms:consumer-type >
+				<jms:queue-consumer />
+			</jms:consumer-type>
+		</jms:consumer-config>
+	</jms:config>
+	<flow name="publish-subscribe-advancedFlow" doc:id="a657a9da-ce9c-4a0e-999a-4acc8b35cf03" >
+		<http:listener doc:name="Listener" doc:id="f5a7e4ce-4fc0-4e80-ab45-dc409c9382dd" config-ref="HTTP_Listener_config" path="/api/publishadv"/>
+		<logger level="INFO" doc:name="Log Publish Message" doc:id="a8140436-3bec-47c7-985a-2f13427bccc9" message="Message to be published #[payload]"/>
+		<jms:publish doc:name="Publish" doc:id="8979d454-be3e-4eba-bc79-0911b35f4452" config-ref="JMS_Config2" destination="topic2" destinationType="TOPIC" priority="#[attributes.headers.JMSPriority]" doc:description="Publish messaage with :
+1 . Standard JMS properties like JMStype, Priority
+2. Custom properies Prop1, Prop2
+3. JMSX property like Application, user id">
+			<jms:message jmsType='#[attributes.headers.JMSType]' >
+				<jms:properties ><![CDATA[#[{
+ "Prop1" : attributes.headers.Prop1,
+ "Prop2" : attributes.headers.Prop2
+}]]]></jms:properties>
+				<jms:jmsx-properties jmsxUserID="#[attributes.headers.JMSXUserID]" jmsxAppID="#[attributes.headers.JMSXAppID]" />
+			</jms:message>
+		</jms:publish>
+		<logger level="INFO" doc:name="Logger" doc:id="ede14065-e4c3-45b0-8be3-b335232004a4" message="Message was published !"/>
+	</flow>
+	<flow name="subscriber-advancedFlow1" doc:id="0c5f088b-bba5-45c7-8d6a-a690f0396cac" >
+		<jms:listener doc:name="Listener" doc:id="468ca933-da40-4431-aa7c-015dd0c6f887" config-ref="JMS_Config2" destination="topic2" numberOfConsumers="1" doc:description="Flow to illustrate a simple subscriber">
+			<jms:consumer-type >
+				<jms:topic-consumer />
+			</jms:consumer-type>
+		</jms:listener>
+		<logger level="INFO" doc:name="Log Message" doc:id="6691a297-fa0d-425d-b8a8-d8f98dbb4da1" message="Subscriber1 #[payload]" doc:description="Flow to illustrate a simple subscriber"/>
+	</flow>
+	<flow name="publish-subscribe-advancedFlow1" doc:id="176bf8f1-94ad-42bd-8aa8-03ca7f569958" doc:description="Flow to illustrate a subscriber which listenes for only particular Messages which fulfils the Selector criteria">
+		<jms:listener doc:name="Filtered Listener" doc:id="67e4c927-ebfd-4913-9fa0-118ec0cc2fec" config-ref="JMS_Config2" destination="topic2" selector="JMSType = 'Greeting' AND JMSPriority &gt; 3 AND Prop2 = 'B'" numberOfConsumers="1" doc:description="Subscriber which listenes for only particular Messages which fulfils the Selector criteria">
+			<jms:consumer-type >
+				<jms:topic-consumer />
+			</jms:consumer-type>
+		</jms:listener>
+		<logger level="INFO" doc:name="Logger Message" doc:id="c7fcca93-9fcb-492c-af03-c05988e458c9" message="Subscriber2 #[payload]"/>
+	</flow>
+</mule>

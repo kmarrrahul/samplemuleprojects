@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<flow name="publish-subscribe-Request-reply-pattern-Flow" doc:id="f41cd5f9-e504-4a9f-834e-6529c8bca554" >
+<http:listener doc:name="Listener" doc:id="4fc091c2-80e9-4b29-be8f-561ba28386a0" config-ref="HTTP_Listener_config" path="/api/publishconsume"/>
+		<logger level="INFO" doc:name="Log Payload" doc:id="42afa365-2fd3-4d9e-8f26-6f097a05530e" message="Payload being published #[payload]"/>
+		<jms:publish-consume doc:name="Publish consume" doc:id="a6962428-3d43-4dea-8e5b-6f8553d42fb6" config-ref="JMS_Config2" destination="tempqueue">
+		</jms:publish-consume>
+		<logger level="INFO" doc:name="Log Response" doc:id="798b003b-74c8-40bc-bd5a-e64f9bd2324b" message="Response recieved from Reply to Queue #[payload]"/>
+	</flow>
+	<flow name="processreplyFlow" doc:id="ac49be19-84dd-4c1e-913a-1cd2a16349e6" >
+		<jms:listener doc:name="Listener" doc:id="e43b84e6-291c-4717-9a85-0b94eb472157" config-ref="JMS_Config2" destination="tempqueue" numberOfConsumers="1">
+		
+		</jms:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="7361f15f-abaf-472e-b6f0-b87aaab15a5b" message="Message recieved #[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="afd71855-677a-493b-a44d-20848d0fa348" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload.Message]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+
+		<logger level="INFO" doc:name="Logger" doc:id="2a321c19-ff63-4c1a-a7ca-3c8d552ce737" message="After Transform #[payload]"/>
+	</flow>
+</mule>

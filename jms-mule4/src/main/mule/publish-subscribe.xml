@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:jms="http://www.mulesoft.org/schema/mule/jms"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/jms http://www.mulesoft.org/schema/mule/jms/current/mule-jms.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="1f3fea6e-23a4-42e9-bd14-a16275b10379" >
+		<http:listener-connection host="0.0.0.0" port="9002" />
+	</http:listener-config>
+	<jms:config name="JMS_Config" doc:name="JMS Config" doc:id="8c80727a-4584-4aaf-8a0a-98a4fb93663e" >
+		<jms:active-mq-connection username="admin" password="admin" clientId="durableclient123">
+      <jms:caching-strategy >
+				<jms:default-caching />
+			</jms:caching-strategy>
+			<jms:factory-configuration brokerUrl="tcp://localhost:61616"
+                                 initialRedeliveryDelay="20000" redeliveryDelay="20000"  maxRedelivery="10"/>
+  </jms:active-mq-connection>
+
+		<jms:consumer-config >
+			<jms:consumer-type >
+				<jms:queue-consumer />
+			</jms:consumer-type>
+		</jms:consumer-config>
+	</jms:config>
+ 	<flow name="publish-Flow" doc:id="77ce315f-7cde-40b9-b7fe-eaa6ab17b70f" doc:description="Flow to Publish a Message on a JMS Topic">
+		<http:listener doc:name="Listener" doc:id="4fc091c2-80e9-4b29-be8f-561ba28386a0" config-ref="HTTP_Listener_config" path="/api/publish"/>
+		<logger level="INFO" doc:name="Log Payload" doc:id="798cf386-f5a0-484d-9297-2bb24a154088" message="Message to be Published #[payload]"/>
+		<jms:publish doc:name="Publish to Topic" doc:id="d9ead9f0-c9a9-41b0-975c-e18a41d2c58f" config-ref="JMS_Config" destination="topic1" destinationType="TOPIC" sendCorrelationId="ALWAYS" timeToLive="20" timeToLiveUnit="SECONDS"/>
+		<logger level="INFO" doc:name="Log Payload" doc:id="d1c5e969-8392-4b85-af9f-30e50ec9b2ee" message="After Publishing #[payload]"/>
+	</flow>
+ 	<flow name="subscriberFlow" doc:id="784a0f3f-d9d6-4a2e-8e35-cca3e35b6a2f" >
+		<jms:listener doc:name="Listener to Messages" doc:id="ec97720d-406b-4949-b2db-ed216cbf8471" config-ref="JMS_Config" destination="topic1" numberOfConsumers="1" doc:description='Subscriber1 for the topic "topic1"'>
+			<jms:consumer-type >
+				<jms:topic-consumer subscriptionName="topic1subscription"/>
+			</jms:consumer-type>
+		</jms:listener>
+		<logger level="INFO" doc:name="Log Message from TOPIC" doc:id="b2b5ecc9-7b5d-489d-8282-68e55a48a3c0" message="Message recieved from Topic #[payload]" doc:description='Subscriber1 for the topic "topic1"'/>
+		
+	</flow> 
+	<flow name="subscriber2Flow" doc:id="784a0f3f-d9d6-4a2e-8e35-cca3e35b6a2f" >
+		<jms:listener doc:name="Durable Listener" doc:id="56caecba-72bc-4d1b-b3cb-68318f5b743e" config-ref="JMS_Config" destination="topic1" numberOfConsumers="1" doc:description='Another Subscriber for the topic "topic1"
+This subscriber is Durable.
+Note that the ClientID in JMS configuration is set to a constant value for the subsription to be durable, so that the JMS broker can keep track of the client'>
+			<jms:consumer-type >
+				<jms:topic-consumer subscriptionName="topic1subscription2" durable="true"/>
+			</jms:consumer-type>
+			<jms:response timeToLive="20" timeToLiveUnit="SECONDS" />
+		</jms:listener>
+		<logger level="INFO" doc:name="Log Message from TOPIC" doc:id="b2b5ecc9-7b5d-489d-8282-68e55a48a3c0" message="Durable Message recieved from Topic #[payload]"/>
+		
+	</flow> 
+
+	<flow name="onDemandSubscribeFlow" doc:id="91704e94-5e8e-4560-b04f-18312109ecc2" >
+<http:listener doc:name="Listener" doc:id="4fc091c2-80e9-4b29-be8f-561ba28386a0" config-ref="HTTP_Listener_config" path="/api/ondemandconsume"/>
+		<logger level="INFO" doc:name="Log Trigger" doc:id="91b5afee-41c5-4210-80d4-c2d08ad7019e" message="Request recieved to Consume Message from TOPIC"/>
+		<jms:consume doc:name="Consume Message from TOPIC" doc:id="7772b635-a044-4180-aeef-c995bc32e9a4" config-ref="JMS_Config" destination="topic1" maximumWait="20" maximumWaitUnit="SECONDS" doc:description="Using the wait time of 20 Seconds
+Will error out with Timeout error if a message is not presnt in TOPIC within that time
+">
+			<jms:consumer-type >
+				<jms:topic-consumer />
+			</jms:consumer-type>
+		</jms:consume>
+		<logger level="INFO" doc:name="Log Message recived from TOPIC" doc:id="4d6a8d29-0f7f-4f5f-9285-6af126f78696" message="Message recieved from TOPIC #[payload]"/>
+		<ee:transform doc:name="Transform to XML" doc:id="ac6fc31d-5adb-4c96-a2e8-dea701acee1f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+---
+Request : payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Log Response" doc:id="b292b884-de88-493a-b4df-50c13a603c65" message="HTTP Response sent back to Client #[payload]"/>
+	</flow>
+
+</mule>
