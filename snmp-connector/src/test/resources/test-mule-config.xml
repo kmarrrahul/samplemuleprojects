@@ -1,0 +1,19 @@
+<mule xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xmlns:snmp="http://www.mulesoft.org/schema/mule/snmp"
+      xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+          http://www.mulesoft.org/schema/mule/snmp http://www.mulesoft.org/schema/mule/snmp/current/mule-snmp.xsd">
+
+    <snmp:config name="config" host="localhost" port="161">
+        <snmp:connection host="localhost" port="161" />
+    </snmp:config>
+
+    <flow name="sayHiFlow">
+        <snmp:say-hi person="Sreenivasa"/>
+    </flow>
+
+    <flow name="retrieveInfoFlow">
+        <snmp:retrieve-info config-ref="config"/>
+    </flow>
+
+</mule>
