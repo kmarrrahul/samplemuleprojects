@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:validation="http://www.mulesoft.org/schema/mule/validation"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="1d7411fa-747e-4399-8384-5e61738970fd" >
+		<http:listener-connection host="0.0.0.0" port="9006" />
+	</http:listener-config>
+	<validation:config name="Validation_Config" doc:name="Validation Config" doc:id="727e7b06-08a9-4ff1-ad8f-4e2b2e104cb6" />
+	<flow name="iterative_callFlow1" doc:id="a1167e51-0ee5-4b68-b2a7-4ed185157e06" doc:description="Run a loop fixed number of times">
+		<scheduler doc:name="Scheduler" doc:id="fe19a05b-dc7e-44dc-8816-4b12e4798e9c" >
+			<scheduling-strategy >
+				<fixed-frequency timeUnit="MINUTES" frequency="1"/>
+			</scheduling-strategy>
+		</scheduler>
+		<set-variable value="8" doc:name="Set Variable" doc:id="2ca31be8-cd66-4dfe-a577-383f1d70d50f" variableName="maxIteration"/>
+		<foreach doc:name="For Each" doc:id="441178c5-38a8-4eb3-87ae-4023e073a1a5" collection="#[1as Number to vars.maxIteration as Number]">
+			<logger level="INFO" doc:name="Logger" doc:id="1817eb70-558e-4852-8026-3ccf9a0cac99" message="From Scheduler 1 : Current Iteration #[vars.counter]"/>
+		</foreach>
+	</flow>
+	<flow name="iterative_callFlow" doc:id="71afd117-0039-482a-928d-01d10c92e9d6" >
+		<scheduler doc:name="Scheduler" doc:id="7812fd0f-8602-4fc0-be36-a0a13ad606f8" >
+			<scheduling-strategy >
+				<fixed-frequency startDelay="1" frequency="1" timeUnit="MINUTES"/>
+			</scheduling-strategy>
+		</scheduler>
+		<set-variable value="8" doc:name="MaxIteration" doc:id="12a2215f-a5ec-4031-b681-999ed9d48fac" variableName="maxIteration" doc:description="No use of this variable here"/>
+		<set-variable value="#[true]" doc:name="Initialize Processing Required" doc:id="823adef0-2b29-4d86-861e-c21ccd2c2119" variableName="processingRequired"/>
+		<foreach doc:name="For Each" doc:id="aad5d5c0-4ed6-47bf-a1a7-a3a79025be70" doc:description="Run the For Each 100 times until a certain condition is met" collection="#[1 to 100]">
+			<logger level="INFO" doc:name="Logger" doc:id="cd0537b3-6091-48a3-8b46-3b624fc9ee94" message="From Scheduler 2 : Current Iteration #[vars.counter]" />
+			<ee:transform doc:name="Modify Processing Required Variable : Fictional Business Logic" doc:id="255a8f01-a69b-4264-bb10-74e9de0d5002" >
+				<ee:message >
+				</ee:message>
+				<ee:variables >
+					<ee:set-variable variableName="processingRequired" ><![CDATA[%dw 2.0
+output application/java
+---
+vars.counter < 46 
+]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<validation:is-true doc:name="Is true" doc:id="86ab2887-9003-4cb3-8fbe-79730fe0b545" config-ref="Validation_Config" message="No More Processing is Required" expression="#[vars.processingRequired]"/>
+		</foreach>
+	</flow>
+</mule>
