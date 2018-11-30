@@ -1,0 +1,10 @@
+State:
+  California:
+    State_ID: "CA"
+    ContryId: "4"
+  Alabama:
+    State_ID: "AL"
+    ContryId: "4"
+  Arizona:
+    State_ID: "AZ"
+    ContryId: "5"

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<configuration-properties doc:name="Configuration properties" doc:id="aa6295d5-8bae-4e1a-9514-aa5a716eb398" file="Configuration.yaml" />
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="528cff39-2855-4c5e-bf94-f55350008eec" >
+		<http:listener-connection host="0.0.0.0" port="9002" />
+	</http:listener-config>
+	<flow name="app2Flow" doc:id="c8f02e2d-61cc-4cf1-a957-c16eef45ec5a" >
+		<http:listener doc:name="Listener" doc:id="24f0a9b9-142c-4f39-b534-b6a5d17b1571" config-ref="HTTP_Listener_config" path="/app"/>
+		<ee:transform doc:name="Enrich JSON with Country ID and State ID" doc:id="fd6460a0-bcb4-4ac4-b4f8-2cce5cb37aee" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map {
+    "State": $.State,
+    "Fiedl1": $.Field1,
+    "Field2": $.Field2,
+    "ContryId" : p("State." ++ $.State ++ ".State_ID"),
+    "State_ID" : p("State." ++ $.State ++ ".ContryId"),
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
