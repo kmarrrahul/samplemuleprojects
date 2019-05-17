@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:aggregators="http://www.mulesoft.org/schema/mule/aggregators" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/aggregators http://www.mulesoft.org/schema/mule/aggregators/current/mule-aggregators.xsd">
+	<flow name="aggregator-module-timer-Flow" doc:id="ea9e7664-a362-4b52-a25e-e70b0319d1f4" >
+		<set-variable value="#[0]" doc:name="Counter" doc:id="5ca210a9-c68c-4f3a-9335-8c26b63316d2" variableName="counter1" />
+		<aggregators:time-based-aggregator doc:name="Time based aggregator" doc:id="f3d6988c-90d5-4efa-a78c-8a0a3ba452c6" name="timeBasedAggregator" period="1" periodUnit="MINUTES" objectStore="Object_store1" >
+			<aggregators:incremental-aggregation >
+				<set-variable value="vars.counter1 + 1" doc:name="Counter" doc:id="58f0231c-cffe-4f7d-8649-20c556cf3446" variableName="counter1" />
+				<logger level="INFO" doc:name="Logger" doc:id="eba66256-b6af-46e0-b080-9a716eaa576d" message="Incremental Time !" />
+			</aggregators:incremental-aggregation>
+		</aggregators:time-based-aggregator>
+	</flow>
+	<flow name="aggregator-module-listener-for-timed-Flow" doc:id="a2df0cb7-d9a2-4494-b720-4e6862b51d2b" >
+		<aggregators:aggregator-listener doc:name="Aggregator listener" doc:id="1259d073-e874-452b-ae2d-dfc3b0fa8da3" aggregatorName="timeBasedAggregator" includeTimedOutGroups="true" doc:description="Listener is triggered whenever the Aggregation is Complete or Timed out"/>
+		<flow-ref doc:name="aggregation_Complete_sub_flow" doc:id="26108352-c5c9-4a5a-93c9-ed37589e97b5" name="aggregation_Complete_sub_flow" />
+	</flow>
+</mule>

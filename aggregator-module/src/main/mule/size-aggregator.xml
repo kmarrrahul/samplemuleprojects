@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:aggregators="http://www.mulesoft.org/schema/mule/aggregators" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/aggregators http://www.mulesoft.org/schema/mule/aggregators/current/mule-aggregators.xsd">
+	<flow name="aggregator-module-size-Flow" doc:id="66b9c5d1-fa43-4c17-b218-7ffca42c431c" >
+		<set-variable value="#[0]" doc:name="Counter" doc:id="2c1a3ba2-2f84-46e5-8173-56929a7ac044" variableName="counter1" />
+		<aggregators:size-based-aggregator doc:name="Size based aggregator" doc:id="4abcc06c-1325-4611-9e53-9e12b834faf0" name="sizeBasedAggregator" maxSize="10" timeout="30" objectStore="Object_store1" >
+			<aggregators:incremental-aggregation >
+				<set-variable value="#[vars.counter1 + 1]" doc:name="Counter" doc:id="16328da6-215c-40e7-90a9-4d41c8ae63de" variableName="counter1" />
+				<logger level="INFO" doc:name="Logger" doc:id="159b326c-5d4b-4a89-a5b7-adb6e2099e44" message="Incremental size !" />
+			</aggregators:incremental-aggregation>
+			<aggregators:aggregation-complete >
+				<flow-ref doc:name="aggregation_Complete_sub_flow" doc:id="3935c81b-74e3-4290-8e23-0bd88d8a3fd0" name="aggregation_Complete_sub_flow" />
+			</aggregators:aggregation-complete>
+		</aggregators:size-based-aggregator>
+		<logger level="INFO" doc:name="Logger" doc:id="787a6053-8055-4dec-be1e-4812073d1c11" message="DONE!!" />
+	</flow>
+	<flow name="aggregator-module-listenerFlow" doc:id="31963811-95f4-4daa-b3d3-33e0d2e87250" doc:description="Listener is triggered whenever the Aggregation is Complete or Timed out">
+		<aggregators:aggregator-listener doc:name="Aggregator listener" doc:id="973e0207-0f27-41e8-8511-5b002c36bf4f" aggregatorName="sizeBasedAggregator" includeTimedOutGroups="true" />
+		<set-variable value="#[attributes.isAggregationComplete]" doc:name="Is Aggregation Complete" doc:id="ca0db1ad-473e-47cb-8c9b-9ebde21b35fd" variableName="isAggregationComplete" />
+		<choice doc:name="Choice" doc:id="a10e5150-22d5-44fc-8828-f6ec4b7a329f" doc:description="Aggregation will trigger only if Aggregation was not complete i.e. By Timeout only" >
+			<when expression="#[not vars.isAggregationComplete]" >
+				<flow-ref doc:name="aggregation_Complete_sub_flow" doc:id="ddbb785c-31b4-470c-93e4-4f21522b71bb" name="aggregation_Complete_sub_flow" />
+			</when>
+		</choice>
+	</flow>
+</mule>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:aggregators="http://www.mulesoft.org/schema/mule/aggregators" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/aggregators http://www.mulesoft.org/schema/mule/aggregators/current/mule-aggregators.xsd">
+	<flow name="aggregator-module-group-Flow" doc:id="49854ffa-0656-412a-a455-cf5429126d06" >
+		<set-payload value="#[correlationId]" doc:name="Set Payload" doc:id="4df6c306-ae0f-4bc8-a087-984efe844d70" doc:description="For tracking!!"/>
+		<set-variable value="#[0]" doc:name="Counter" doc:id="03fbd3c5-6198-4e6f-b9bd-e8c91ffe9b8e" variableName="counter1" />
+		<aggregators:group-based-aggregator doc:name="Group based aggregator" doc:id="e1d2c701-4507-4182-9a01-1a42d8fa2f40" name="groupBasedAggregator" timeout="30" groupSize="10" evictionTime="0" objectStore="Object_store1" doc:description="correlationId for testing will be changed everytime by passing X-Correlation-ID header via the HTTP Call to this API">
+			<aggregators:incremental-aggregation >
+				<set-variable value="vars.counter1 + 1" doc:name="Counter" doc:id="060b5197-0f20-49c3-8ca0-65d66469eb59" variableName="counter1" />
+				<logger level="INFO" doc:name="Logger" doc:id="3e6a49f0-02f4-47e6-9e91-880a703fae9e" message="Incremental Time !" />
+			</aggregators:incremental-aggregation>
+			<aggregators:aggregation-complete >
+				<flow-ref doc:name="aggregation_Complete_sub_flow" doc:id="e83d4144-8a0a-4631-9215-69cec90ef1e3" name="aggregation_Complete_sub_flow" />
+			</aggregators:aggregation-complete>
+		</aggregators:group-based-aggregator>
+	</flow>
+	<flow name="aggregator-module-listener-for-grouped-Flow" doc:id="79d2be86-1423-46cd-963e-0788b664631b" >
+		<aggregators:aggregator-listener doc:name="Aggregator listener" doc:id="f28247b7-eeba-4457-a38f-8b893d3dfc5b" doc:description="Listener is triggered whenever the Aggregation is Complete or Timed out" aggregatorName="groupBasedAggregator" includeTimedOutGroups="true" />
+		<set-variable value="#[attributes.isAggregationComplete]" doc:name="Is Aggregation Complete" doc:id="fc2d7c6c-804f-4eea-82f0-e1c6da7f76ba" variableName="isAggregationComplete" />
+		<choice doc:name="Choice" doc:id="5dfafa21-2836-4daa-9c24-8ecfa8f1cb5e" doc:description="Aggregation will trigger only if Aggregation was not complete i.e. By Timeout only" >
+			<when expression="#[not vars.isAggregationComplete]" >
+				<flow-ref doc:name="aggregation_Complete_sub_flow" doc:id="7f0f160e-f474-4860-a5fc-eded3ea95ba3" name="aggregation_Complete_sub_flow" />
+			</when>
+		</choice>
+	</flow>
+</mule>

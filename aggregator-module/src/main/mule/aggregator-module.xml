@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:os="http://www.mulesoft.org/schema/mule/os"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:aggregators="http://www.mulesoft.org/schema/mule/aggregators" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/aggregators http://www.mulesoft.org/schema/mule/aggregators/current/mule-aggregators.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="06ac19c1-a016-4071-a32c-0d14ed61ee13" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<os:config name="ObjectStore_Config1" doc:name="ObjectStore Config" doc:id="a3bd3422-4a64-4281-8beb-8241f5ed926a" />
+	<os:object-store name="Object_store1" doc:name="Object store" doc:id="630bc747-b866-4d5e-981b-f765b545798b" config-ref="ObjectStore_Config1" />
+	<flow name="aggregator-moduleFlow" doc:id="8f821e44-2703-4b10-b5b5-8d72286080e7">
+		<http:listener doc:name="Listener" doc:id="42626ec4-7699-4ab2-8dc4-fe2c382d4445" config-ref="HTTP_Listener_config" path="/test" />
+		<set-payload value="#[output application/json --- uuid()]" doc:name="Set Payload" doc:id="152a28ed-986b-4671-8a55-1405d785cae2" mimeType="application/json" />
+		<flow-ref doc:name="Flow Reference" doc:id="6f2bdaef-13da-470d-9908-46125cc4570b" name="#['aggregator-module-' ++ attributes.headers.aggregatorType  ++ '-Flow']" />
+		<ee:transform doc:name="Transform Message" doc:id="99d2f8c7-20ad-4dbc-8616-29dd72ef87f6">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<sub-flow name="aggregation_Complete_sub_flow" doc:id="f76cf8a6-821b-4825-96f7-f5d248b5f767">
+		<logger level="INFO" doc:name="Logger" doc:id="92260887-7b8a-4ec5-a63b-04e931d180a8" message="Inside Aggregated Flow !! Is Aggregation Complete ? -&gt; #[vars.isAggregationComplete]" />
+		<ee:transform doc:name="Aggregated Payload" doc:id="af856dea-f616-40b8-b7aa-4f35ca108893">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="dcd929a2-b3f7-4426-8e0b-7f827755ee35" message="#[payload]" />
+	</sub-flow>
+</mule>
